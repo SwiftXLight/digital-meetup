@@ -30,7 +30,7 @@ A Django landing page for the **Digital Meetup** event with a public registratio
 |----------|--------|-----------|
 | App layout | Single app `event/` under project `config/` | One bounded context; keeps the 6–7h scope manageable |
 | Active event | `Event.get_active()` returns latest event by date/time | Assignment targets a single-event landing page, not multi-event routing |
-| Registration uniqueness | DB `UniqueConstraint(event, email)` + form `clean_email()` | Defense in depth; friendly error before DB integrity error |
+| Registration uniqueness | DB `UniqueConstraint(event, email)` + form `clean_email()` + `IntegrityError` fallback in view | Defense in depth; friendly error on duplicate email, including concurrent POSTs |
 | Registration flow | Post-Redirect-Get to `/register/success/` | Prevents duplicate submissions on page refresh |
 | Settings split | `base.py` / `local.py` / `production.py` | Clean separation of dev and production config |
 | Environment config | `django-environ` + `.env` (gitignored) | Secrets stay out of git |

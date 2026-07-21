@@ -5,6 +5,10 @@ from .models import Registration
 
 
 class RegistrationForm(forms.ModelForm):
+    DUPLICATE_EMAIL_MESSAGE = (
+        "A registration with this email already exists for this event."
+    )
+
     class Meta:
         model = Registration
         fields = ["name", "email", "company", "comment", "data_consent"]
@@ -35,9 +39,7 @@ class RegistrationForm(forms.ModelForm):
                 email__iexact=email,
             ).exists()
         ):
-            raise ValidationError(
-                "A registration with this email already exists for this event."
-            )
+            raise ValidationError(self.DUPLICATE_EMAIL_MESSAGE)
         return email
 
     def clean_data_consent(self):

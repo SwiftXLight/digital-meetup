@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
@@ -32,8 +33,12 @@ def register(request):
 
     form = RegistrationForm(request.POST, event=event)
     if form.is_valid():
-        register_participant(event, form.cleaned_data)
-        return redirect("registration_success")
+        try:
+            register_participant(event, form.cleaned_data)
+        except IntegrityError:
+            form.add_error("email", RegistrationForm.DUPLICATE_EMAIL_MESSAGE)
+        else:
+            return redirect("registration_success")
 
     return render(
         request,

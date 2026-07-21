@@ -1,5 +1,7 @@
 from datetime import date, time
+from unittest.mock import patch
 
+from django.db import IntegrityError
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -88,3 +90,14 @@ class EventSiteTests(TestCase):
             "A registration with this email already exists for this event.",
         )
         self.assertEqual(Registration.objects.count(), 1)
+
+    @patch("event.views.register_participant", side_effect=IntegrityError)
+    def test_duplicate_email_integrity_error_shows_friendly_message(self, _mock_register):
+        response = self.client.post("/register/", self._registration_payload())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "A registration with this email already exists for this event.",
+        )
+        self.assertEqual(Registration.objects.count(), 0)
