@@ -8,7 +8,7 @@ A Django landing page for the **Digital Meetup** event with a public registratio
 |----------|-----|
 | Live site | https://digital-meetup-rt7w.onrender.com/ *(update if your Render URL differs)* |
 | Repository | https://github.com/SwiftXLight/digital-meetup |
-| Admin panel | https://digital-meetup-rt7w.onrender.com//admin/ |
+| Admin panel | https://digital-meetup-rt7w.onrender.com/admin/ |
 
 > Admin credentials are **not** stored in this repository. Share them separately with the reviewer (see [Admin access](#admin-access) below).
 
@@ -20,6 +20,7 @@ A Django landing page for the **Digital Meetup** event with a public registratio
 - Server-side validation and duplicate-email protection (one email per event)
 - Post-Redirect-Get (PRG) after successful registration
 - Django Admin with search, filters, ordering, image previews, CSV export
+- `seed_demo_data` management command for quick demo content
 - PostgreSQL locally and in production
 - Deployed on Render (free tier)
 
@@ -50,6 +51,7 @@ digital-meetup/
 │       ├── local.py
 │       └── production.py
 ├── event/                  # Models, forms, views, admin, services, tests
+│   └── management/commands/  # ensure_superuser, seed_demo_data
 ├── templates/              # Base and event templates
 ├── static/event/           # Custom CSS and placeholder image
 ├── docker-compose.yml      # Local PostgreSQL
@@ -126,7 +128,35 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-### 7. Run development server
+### 7. Load demo content (optional)
+
+Populate the landing page with sample event data:
+
+```bash
+python manage.py seed_demo_data
+```
+
+This creates:
+
+- One event (**Digital Meetup 2026**) with schedule items
+- Two published speakers and one unpublished draft speaker
+- Two published FAQs and one unpublished draft FAQ
+
+The command is **idempotent**: if the demo event already exists, it skips and prints a warning. To replace demo data:
+
+```bash
+python manage.py seed_demo_data --force
+```
+
+To remove demo data only:
+
+```bash
+python manage.py seed_demo_data --clear
+```
+
+Images are not uploaded by the seed script — the site shows placeholder graphics until you add cover/speaker photos in admin (see [Media files on Render](#media-files-on-render-free-tier) below).
+
+### 8. Run development server
 
 ```bash
 python manage.py runserver
@@ -136,8 +166,6 @@ Open:
 
 - Landing page: http://127.0.0.1:8000/
 - Admin: http://127.0.0.1:8000/admin/
-
-Seed content in admin (Event, Speakers, Schedule, FAQs) to populate the landing page.
 
 ---
 
@@ -180,10 +208,42 @@ The project includes a [`render.yaml`](render.yaml) Blueprint that creates:
 
 ### Build / start commands (from `render.yaml`)
 
-- **Build:** `pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py ensure_superuser`
+- **Build:** `pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py ensure_superuser && python manage.py seed_demo_data`
 - **Start:** `gunicorn config.wsgi:application`
 
-Migrations and superuser creation run in the build step because Render free tier does not support Shell or `preDeployCommand`.
+Migrations, superuser creation, and demo seeding run in the build step because Render free tier does not support Shell or `preDeployCommand`.
+
+### Demo content on Render
+
+**Automatic (recommended):** each deploy runs `seed_demo_data` at the end of the build. The command is **idempotent** — it creates the demo event, speakers, schedule, and FAQs only if **Digital Meetup 2026** is not already in the database. Later deploys skip seeding and leave your data unchanged.
+
+To populate a **fresh** Render database: push this repo and redeploy (or trigger **Manual Deploy** in the Render dashboard). After the build finishes, open your live site — you should see event text, speakers, schedule, and FAQ (placeholder images until you upload photos in admin).
+
+**Manual (without redeploy):** if the site is already deployed but empty, seed from your machine using Render’s **External Database URL**:
+
+```bash
+# Git Bash / macOS / Linux
+export DATABASE_URL="postgresql://..."   # Render → PostgreSQL → External Database URL
+export DJANGO_SETTINGS_MODULE=config.settings.production
+export SECRET_KEY=any-temp-value-for-local-run
+export ALLOWED_HOSTS=localhost
+
+python manage.py seed_demo_data
+```
+
+```powershell
+# PowerShell
+$env:DATABASE_URL = "postgresql://..."
+$env:DJANGO_SETTINGS_MODULE = "config.settings.production"
+$env:SECRET_KEY = "any-temp-value-for-local-run"
+$env:ALLOWED_HOSTS = "localhost"
+
+python manage.py seed_demo_data
+```
+
+Use `--force` only if you want to **replace** existing demo rows. Seeding is **text only** (no image files), so the landing page works on Render free tier without persistent media.
+
+**To disable auto-seed on deploy:** remove `&& python manage.py seed_demo_data` from `buildCommand` in `render.yaml`.
 
 ### Create admin without Shell (free tier)
 
@@ -210,11 +270,35 @@ Password: <provided separately>
 | Limitation | Notes |
 |------------|-------|
 | Single active event | Public site shows one event (`Event.get_active()`). Multiple events can exist in admin, but only the latest by date is displayed. |
-| Ephemeral media on Render free tier | Uploaded images may be lost after redeploy or restart. Database content persists. Persistent disk requires a paid Render plan. |
+| Ephemeral media on Render free tier | See [Media files on Render](#media-files-on-render-free-tier) below. |
 | No email confirmation | Registrations are saved to the database only; no email is sent to participants. |
 | No spam protection | Registration form has CSRF protection but no CAPTCHA or rate limiting. |
 | Render free tier cold starts | Service sleeps after inactivity; first request may take ~30–60 seconds. |
 | Migrations in build step | On free tier, migrations run during `buildCommand` instead of a dedicated pre-deploy hook. |
+
+### Media files on Render (free tier)
+
+On Render’s **free** web tier, the filesystem is **ephemeral**: files written to `MEDIA_ROOT` (event covers, speaker photos) live on the container disk and **may disappear after a redeploy, restart, or instance swap**. PostgreSQL data (events, text fields, registrations) persists; only uploaded binary files are at risk.
+
+This project intentionally uses **placeholder images** in templates when no upload is present, and `seed_demo_data` seeds text content without attaching files — so the landing page stays usable even without persistent media.
+
+**What we would do in a real project (or with more time):**
+
+| Approach | When to use | Notes |
+|----------|-------------|-------|
+| **Object storage (recommended)** | Production on any PaaS | Store uploads in **S3**, **Cloudflare R2**, or **Backblaze B2** via `django-storages` + `boto3`. Media survives deploys; CDN-friendly; standard for Django production. |
+| **Render persistent disk** | Stay on Render, few uploads | Mount a paid persistent disk at e.g. `/var/data/media` and set `MEDIA_ROOT`. Simpler than S3, but tied to one host and not ideal for multi-instance scaling. |
+| **External image URLs** | Marketing-heavy sites | Keep images on a CMS/CDN; store URLs in the model instead of `ImageField` uploads. |
+| **Commit static marketing assets** | Fixed branding only | Ship hero/speaker images under `static/` (versioned in git). Good for logos; bad for admin-uploaded content. |
+
+**Concrete next steps for this codebase:**
+
+1. Add `django-storages` and configure `DEFAULT_FILE_STORAGE` to S3/R2 in `production.py`.
+2. Move secrets (`AWS_ACCESS_KEY_ID`, `AWS_STORAGE_BUCKET_NAME`, etc.) to Render environment variables.
+3. Optionally add image validation/thumbnails (Pillow or `easy-thumbnails`) before upload.
+4. Keep WhiteNoise for **static** files; use object storage only for **media** uploads.
+
+For this test assignment, ephemeral media on the free tier is an accepted trade-off and is documented here for reviewers.
 
 ---
 
@@ -223,6 +307,7 @@ Password: <provided separately>
 | Extra | Status |
 |-------|--------|
 | Docker Compose for local PostgreSQL | Implemented |
+| Demo data seed command | Implemented (`seed_demo_data`) |
 | Email confirmation | Not implemented |
 | Spam protection (CAPTCHA) | Not implemented |
 | Image optimization | Not implemented |
