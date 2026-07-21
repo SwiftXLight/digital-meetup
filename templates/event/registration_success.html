@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Registration Successful{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 text-center">
+            <div class="alert alert-success" role="alert">
+                <h1 class="h3 mb-3">Thank you for registering!</h1>
+                <p class="mb-0">
+                    Your registration has been received. We look forward to seeing you at the event.
+                </p>
+            </div>
+            <a href="{% url 'landing' %}" class="btn btn-primary">Back to event page</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
