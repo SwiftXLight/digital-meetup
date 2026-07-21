@@ -16,3 +16,18 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])  # noqa: F405
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+render_hostname = env("RENDER_EXTERNAL_HOSTNAME", default="")  # noqa: F405
+if render_hostname:
+    if render_hostname not in ALLOWED_HOSTS:  # noqa: F405
+        ALLOWED_HOSTS.append(render_hostname)  # noqa: F405
+
+    render_origin = f"https://{render_hostname}"
+    if render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(render_origin)
