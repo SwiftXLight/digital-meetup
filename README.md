@@ -15,7 +15,7 @@ A Django landing page for the **Digital Meetup** event with a public registratio
 ## Features
 
 - Public landing page: event info, speakers, schedule, FAQ, registration form
-- Server-side validation and duplicate-email protection (one email per event)
+- Server-side validation and duplicate-email protection (one email per event, case-insensitive)
 - Post-Redirect-Get (PRG) after successful registration
 - Django Admin with search, filters, ordering, image previews, CSV export
 - `seed_demo_data` management command for quick demo content
@@ -32,6 +32,7 @@ A Django landing page for the **Digital Meetup** event with a public registratio
 | Active event | `Event.get_active()` returns latest event by date/time | Assignment targets a single-event landing page, not multi-event routing |
 | Registration uniqueness | DB `UniqueConstraint(event, email)` + form `clean_email()` + `IntegrityError` fallback in view | Defense in depth; friendly error on duplicate email, including concurrent POSTs |
 | Registration flow | Post-Redirect-Get to `/register/success/` | Prevents duplicate submissions on page refresh |
+| Schedule validation | `ScheduleItem.clean()` + `save()` calls `full_clean()` | Valid times enforced on every save path, including Event admin inlines |
 | Settings split | `base.py` / `local.py` / `production.py` | Clean separation of dev and production config |
 | Environment config | `django-environ` + `.env` (gitignored) | Secrets stay out of git |
 | Static files (production) | WhiteNoise + `collectstatic` | No separate static server on Render |
@@ -173,13 +174,21 @@ Open:
 python manage.py test
 ```
 
-Tests cover:
+**Required assignment scenarios:**
 
 1. Home page returns HTTP 200
 2. Unpublished speakers/FAQs are hidden on the public page
 3. Schedule item time validation (`end_time` must be after `start_time`)
 4. Successful registration creates a DB record and redirects to success page
 5. Duplicate email registration is blocked
+
+**Additional coverage (11 tests total):**
+
+- Case-insensitive duplicate email (`email__iexact`)
+- Registration requires data consent
+- Concurrent duplicate POST handled via `IntegrityError` fallback
+- Registration when no active event redirects to landing
+- Schedule validation enforced on model `save()` (not only admin standalone save)
 
 ---
 
@@ -268,6 +277,7 @@ Password: <provided separately>
 | Limitation | Notes |
 |------------|-------|
 | Single active event | Public site shows one event (`Event.get_active()`). Multiple events can exist in admin, but only the latest by date is displayed. |
+| Global speakers and FAQs | Speaker and FAQ models are not tied to a specific event; the landing page shows all published items. Fine for a single-meetup scope. |
 | Ephemeral media on Render free tier | See [Media files on Render](#media-files-on-render-free-tier) below. |
 | No email confirmation | Registrations are saved to the database only; no email is sent to participants. |
 | No spam protection | Registration form has CSRF protection but no CAPTCHA or rate limiting. |
@@ -333,6 +343,18 @@ See [`.env.example`](.env.example) for the full list.
 | `DJANGO_SUPERUSER_PASSWORD` | Production | Admin password for first deploy |
 | `DJANGO_SUPERUSER_EMAIL` | Optional | Admin email |
 | `POSTGRES_PASSWORD` | Local Docker | Password for local PostgreSQL container |
+
+---
+
+## Submission checklist
+
+Before sending the assignment to a reviewer:
+
+- [ ] Live site loads and shows event content (https://digital-meetup-rt7w.onrender.com/)
+- [ ] Admin login works; demo or real content is present
+- [ ] Registration succeeds and duplicate email is rejected
+- [ ] `python manage.py test` passes locally
+- [ ] Admin credentials sent separately (not committed to git)
 
 ---
 
