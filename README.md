@@ -6,11 +6,9 @@ A Django landing page for the **Digital Meetup** event with a public registratio
 
 | Resource | URL |
 |----------|-----|
-| Live site | https://digital-meetup-rt7w.onrender.com/ *(update if your Render URL differs)* |
+| Live site | https://digital-meetup-rt7w.onrender.com/ |
 | Repository | https://github.com/SwiftXLight/digital-meetup |
 | Admin panel | https://digital-meetup-rt7w.onrender.com/admin/ |
-
-> Admin credentials are **not** stored in this repository. Share them separately with the reviewer (see [Admin access](#admin-access) below).
 
 ---
 
@@ -258,7 +256,7 @@ Use `--force` only if you want to **replace** existing demo rows. Seeding is **t
 Template for submission *(fill in and send separately, not in git)*:
 
 ```
-URL:      https://digital-meetup.onrender.com/admin/
+URL:      https://digital-meetup-rt7w.onrender.com/admin/
 Username: admin
 Password: <provided separately>
 ```
