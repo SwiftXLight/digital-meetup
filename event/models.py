@@ -66,6 +66,10 @@ class ScheduleItem(models.Model):
         if self.start_time and self.end_time and self.end_time <= self.start_time:
             raise ValidationError({"end_time": "End time must be after start time."})
 
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
 
 class FAQ(models.Model):
     question = models.CharField(max_length=500)

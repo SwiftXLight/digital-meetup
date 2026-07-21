@@ -39,3 +39,15 @@ class ScheduleItemValidationTests(TestCase):
 
         with self.assertRaises(ValidationError):
             item.full_clean()
+
+    def test_invalid_schedule_item_save_raises_validation_error(self):
+        item = ScheduleItem(
+            event=self.event,
+            start_time=time(10, 0),
+            end_time=time(9, 0),
+            title="Invalid talk",
+            description="Should fail validation on save.",
+        )
+
+        with self.assertRaises(ValidationError):
+            item.save()

@@ -62,10 +62,6 @@ class ScheduleItemAdmin(admin.ModelAdmin):
     search_fields = ("title",)
     autocomplete_fields = ("speaker",)
 
-    def save_model(self, request, obj, form, change):
-        obj.full_clean()
-        super().save_model(request, obj, form, change)
-
 
 @admin.register(FAQ)
 class FAQAdmin(admin.ModelAdmin):
