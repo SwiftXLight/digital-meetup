@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{% if event %}{{ event.name }}{% else %}Digital Meetup{% endif %}{% endblock %}
 
@@ -9,7 +10,7 @@
             {% if event.cover_image %}
                 <img src="{{ event.cover_image.url }}" alt="{{ event.name }}" class="img-fluid rounded hero-cover w-100 mb-4">
             {% else %}
-                <div class="cover-placeholder w-100 mb-4"></div>
+                <img src="{% static 'event/img/placeholder.svg' %}" alt="" class="img-fluid cover-placeholder-img mb-4" role="presentation">
             {% endif %}
             <h1 class="display-5">{{ event.name }}</h1>
             <p class="lead text-muted">
@@ -27,11 +28,9 @@
                             <div class="card h-100">
                                 <div class="card-body text-center">
                                     {% if speaker.photo %}
-                                        <img src="{{ speaker.photo.url }}" alt="{{ speaker.name }}" class="rounded-circle mb-3" width="120" height="120" style="object-fit: cover;">
+                                        <img src="{{ speaker.photo.url }}" alt="{{ speaker.name }}" class="rounded-circle mb-3 speaker-photo">
                                     {% else %}
-                                        <div class="avatar-placeholder mx-auto mb-3">
-                                            {{ speaker.name|slice:":1"|upper }}
-                                        </div>
+                                        <img src="{% static 'event/img/placeholder.svg' %}" alt="" class="rounded-circle mb-3 speaker-photo speaker-photo--placeholder" role="presentation">
                                     {% endif %}
                                     <h5 class="card-title">{{ speaker.name }}</h5>
                                     <p class="text-muted mb-2">{{ speaker.title }}</p>
