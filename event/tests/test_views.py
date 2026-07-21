@@ -91,6 +91,31 @@ class EventSiteTests(TestCase):
         )
         self.assertEqual(Registration.objects.count(), 1)
 
+    def test_duplicate_email_registration_is_case_insensitive(self):
+        self.client.post("/register/", self._registration_payload(email="user@example.com"))
+
+        response = self.client.post(
+            "/register/",
+            self._registration_payload(email="User@Example.com"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "A registration with this email already exists for this event.",
+        )
+        self.assertEqual(Registration.objects.count(), 1)
+
+    def test_registration_requires_data_consent(self):
+        payload = self._registration_payload()
+        del payload["data_consent"]
+
+        response = self.client.post("/register/", payload)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "This field is required.")
+        self.assertEqual(Registration.objects.count(), 0)
+
     @patch("event.views.register_participant", side_effect=IntegrityError)
     def test_duplicate_email_integrity_error_shows_friendly_message(self, _mock_register):
         response = self.client.post("/register/", self._registration_payload())
@@ -100,4 +125,23 @@ class EventSiteTests(TestCase):
             response,
             "A registration with this email already exists for this event.",
         )
+        self.assertEqual(Registration.objects.count(), 0)
+
+
+class RegisterWithoutEventTests(TestCase):
+    def test_register_without_event_redirects_to_landing(self):
+        client = Client()
+        response = client.post(
+            "/register/",
+            {
+                "name": "Jane Doe",
+                "email": "user@example.com",
+                "company": "Acme",
+                "comment": "",
+                "data_consent": True,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("landing"))
         self.assertEqual(Registration.objects.count(), 0)
